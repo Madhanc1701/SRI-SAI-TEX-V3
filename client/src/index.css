@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Industrial Clean Palette - Owner (Navy/Blue) */
+    --primary: 222 47% 31%; /* Deep Navy */
+    --primary-foreground: 210 40% 98%;
+    
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11.2%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11.2%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11.2%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222 47% 31%;
+
+    --radius: 0.75rem;
+
+    --font-sans: 'Inter', sans-serif;
+    --font-display: 'Oswald', sans-serif;
+    
+    --labour-primary: 25 95% 53%; /* Orange/Amber for Labour actions */
+
+    /* Shadcn required variables */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11.2%;
+  }
+
+  .dark {
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11.2%;
+    
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    
+    --card: 222 47% 11.2%;
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 222 47% 11.2%;
+    --popover-foreground: 210 40% 98%;
+    
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    --background: 222 47% 11.2%;
+    --foreground: 210 40% 98%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased font-sans;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(210,100%,98%,1) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(215,100%,96%,1) 0px, transparent 50%);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+    font-family: var(--font-display);
+  }
+}
+
+/* Custom Animations */
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
+/* Glassmorphism utilities */
+.glass-panel {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+}
+
+/* Labour Theme Override Class */
+.labour-theme {
+  --primary: 25 95% 53%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 25 95% 53%;
+}

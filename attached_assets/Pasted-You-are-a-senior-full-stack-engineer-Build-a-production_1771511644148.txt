@@ -1,0 +1,319 @@
+You are a senior full-stack engineer. Build a production-ready mobile-first web app (PWA style) for a small textile company called “SRI SAI TEX”.
+
+The app has 2 logins (Owner and Labour). Labour accounts can ONLY be created by Owner. Use Supabase (PostgreSQL + Auth + Storage) as the online database. Do NOT use any Replit DB.
+
+############################
+# 1) TECH STACK (MUST USE)
+############################
+- Frontend: Next.js (App Router) + TypeScript
+- UI: Tailwind CSS + shadcn/ui (clean mobile UI)
+- Forms: React Hook Form + Zod validation
+- Tables & filtering: TanStack Table
+- Backend/API: Next.js Route Handlers (/app/api/*)
+- Database: Supabase Postgres
+- Server DB client: supabase-js (server-side with SERVICE_ROLE key only in server routes)
+- Client auth: supabase-js with ANON key
+- PDF generation: Server-side using Puppeteer OR Playwright (preferred) OR pdfkit if browserless is hard. Goal: generate bill PDF from HTML template.
+- File storage: Supabase Storage (bucket: "bills")
+- PWA: Add manifest + mobile responsive layout (works nicely on phone browser)
+
+############################
+# 2) AUTH + ROLES
+############################
+Use Supabase Auth (email+password).
+Roles: "owner" and "labour".
+
+Rules:
+- Owner registers first (manual). After owner exists, owner creates labour accounts via an “Add Labour” screen.
+- Labour cannot self-register. Owner creates labour user with temporary password and shares it.
+- On first login, labour must fill profile (name, phone, address, upi_id, upi_qr image).
+- Enforce role access via Supabase Row Level Security + server checks.
+
+Implementation approach:
+- Create a "profiles" table with user_id, role.
+- On login, fetch profile.role and redirect:
+  - owner -> /owner
+  - labour -> /labour
+- Provide middleware/route guards so labour cannot access owner pages and vice versa.
+
+############################
+# 3) FEATURES (MUST IMPLEMENT)
+############################
+
+A) OWNER MODULES
+
+A1) Billing (Bill Generation)
+UI:
+- Page shows already generated bills (reverse by date), grouped/date-wise list.
+- Bottom-right floating + button to create new bill.
+- New bill form:
+  - bill_no: auto-generated unique (human friendly like BILL-YYYYMMDD-XXXX)
+  - company_name: text
+  - date: default today, editable
+  - line items table rows with columns:
+    sl_no (auto 1..n), colour, count(illai), length(m), quantity, amount
+  - When user completes a row (or clicks add row), automatically add a new empty row.
+  - Total amount displayed.
+Flow:
+- Button “Preview & Generate” shows preview screen (read-only bill template).
+- If OK -> “Generate PDF”:
+  - Save bill + items to DB (billing tables)
+  - Generate PDF on server from HTML template
+  - Upload PDF to Supabase Storage bucket "bills"
+  - Store pdf_url in bills table
+  - Add bill to list automatically
+- If Modify -> go back to form with data preserved.
+
+DB:
+- Bills and Bill Items must be stored in DB when generating.
+
+A2) Sales Tracking (NO separate sales table)
+UI:
+- Default shows sales list reverse by date (from bills table joined with bill_items).
+Filters:
+- bill_no -> shows that single bill
+- company_name search -> show bills for that company ordered by date desc
+- date filter: single date OR from-to
+- colour filter, illai filter, length filter (can combine)
+Data source:
+- Must fetch from billing tables only. DO NOT create a separate sales table.
+
+A3) Add Stock (Raw Materials Purchase)
+UI:
+- Shows list of added stock entries (reverse by date)
+- + button -> new stock form
+Form:
+- stock_no auto unique (STK-YYYYMMDD-XXXX)
+- date default today editable
+- items rows:
+  sl_no auto
+  colour (dropdown/text)
+  no (dropdown of frequent values + allow custom)
+  weight (dropdown of frequent values + allow custom)
+  amount (number)
+Save:
+- Store in DB (stocks + stock_items tables).
+
+A4) Stock Tracking (NO separate tracking table)
+UI:
+- Default shows purchased stock reverse by date
+Filters:
+- date single / from-to
+- colour filter
+- date+colour combined
+Data source:
+- Fetch from stocks tables only. DO NOT create another table.
+
+A5) Salary Calculation / Payments (Owner)
+Data sources:
+- Labour work records table (entered by labour)
+UI:
+- Owner page to select a labour and see all work records (filterable by date)
+- For each work row, owner can fill “salary_amount” manually (for now no formula)
+- On save:
+  - Insert into salary_payments table (separate table) linked to labour + work_record_id
+  - status: "PENDING" or "PAID"
+- Owner can mark as PAID (with paid_date).
+- Show “Pending Salary” summary per labour and total pending.
+
+B) LABOUR MODULES
+
+B1) Labour Profile
+- Labour fills profile: name, phone, address, upi_id, upi_qr image upload
+- Store in profiles table columns.
+
+B2) Record Work
+Form fields:
+- sl_no auto
+- colour (text/dropdown)
+- length (integer)
+- illai (integer)
+- set (integer)
+- amount (decimal allowed)
+- unique labour id: use auth user_id (UUID), but also show a human-friendly labour_code like LBR-0001 (generated when owner creates labour).
+Save:
+- Insert into labour_work_records table with labour_user_id.
+History:
+- Labour can see their own work history (reverse by date).
+- Labour can only view their records.
+
+############################
+# 4) DATABASE SCHEMA (SUPABASE POSTGRES)
+############################
+Create SQL migrations (put into /supabase/schema.sql and also show steps to run in Supabase SQL editor).
+
+Tables:
+
+1) profiles
+- user_id uuid primary key references auth.users(id) on delete cascade
+- role text check in ('owner','labour') not null
+- labour_code text unique nullable (only for labour)
+- name text
+- phone text
+- address text
+- upi_id text
+- upi_qr_url text
+- created_at timestamptz default now()
+
+2) bills
+- id uuid primary key default gen_random_uuid()
+- bill_no text unique not null
+- owner_user_id uuid references auth.users(id)
+- company_name text not null
+- bill_date date not null
+- total_amount numeric(12,2) default 0
+- pdf_url text
+- created_at timestamptz default now()
+
+3) bill_items
+- id uuid primary key default gen_random_uuid()
+- bill_id uuid references bills(id) on delete cascade
+- sl_no int not null
+- colour text
+- illai int
+- length_m int
+- quantity int
+- amount numeric(12,2)
+- created_at timestamptz default now()
+
+4) stocks
+- id uuid primary key default gen_random_uuid()
+- stock_no text unique not null
+- owner_user_id uuid references auth.users(id)
+- stock_date date not null
+- total_amount numeric(12,2) default 0
+- created_at timestamptz default now()
+
+5) stock_items
+- id uuid primary key default gen_random_uuid()
+- stock_id uuid references stocks(id) on delete cascade
+- sl_no int not null
+- colour text
+- no int
+- weight int
+- amount numeric(12,2)
+- created_at timestamptz default now()
+
+6) labour_work_records
+- id uuid primary key default gen_random_uuid()
+- labour_user_id uuid references auth.users(id)
+- work_date date not null default current_date
+- sl_no int
+- colour text
+- length int
+- illai int
+- set_count int
+- amount numeric(12,2)
+- created_at timestamptz default now()
+
+7) salary_payments
+- id uuid primary key default gen_random_uuid()
+- owner_user_id uuid references auth.users(id)
+- labour_user_id uuid references auth.users(id)
+- work_record_id uuid references labour_work_records(id) on delete set null
+- salary_amount numeric(12,2) not null
+- status text check in ('PENDING','PAID') default 'PENDING'
+- paid_date date
+- created_at timestamptz default now()
+
+Also add indexes for bill_date, stock_date, labour_user_id, company_name.
+
+############################
+# 5) ROW LEVEL SECURITY (RLS) RULES
+############################
+Enable RLS.
+Policies:
+- profiles:
+  - users can read/update their own profile
+  - owners can read labour profiles
+- bills/bill_items:
+  - only owner can CRUD where owner_user_id = auth.uid()
+- stocks/stock_items:
+  - only owner can CRUD where owner_user_id = auth.uid()
+- labour_work_records:
+  - labour can CRUD their own records where labour_user_id = auth.uid()
+  - owner can read all labour records (needed for salary calc)
+- salary_payments:
+  - owner can CRUD their records
+  - labour can read their own salary payments rows
+
+Because owner creates labour accounts, use a server API route with Supabase Admin (SERVICE_ROLE) to create labour users and insert profile row.
+
+############################
+# 6) APP ROUTES / PAGES
+############################
+Public:
+- /login
+- /logout
+
+Owner:
+- /owner (dashboard cards: Billing, Sales Tracking, Add Stock, Stock Tracking, Salary)
+- /owner/billing
+- /owner/billing/new
+- /owner/billing/[bill_no] (view + download PDF)
+- /owner/sales
+- /owner/stocks
+- /owner/stocks/new
+- /owner/stock-tracking
+- /owner/labours (create labour account + list)
+- /owner/salary
+
+Labour:
+- /labour (dashboard: Profile, Record Work, Work History, Salary Status)
+- /labour/profile
+- /labour/work/new
+- /labour/work/history
+- /labour/salary
+
+############################
+# 7) IMPORTANT UI REQUIREMENTS
+############################
+- Mobile-first layout, big buttons, floating + button bottom-right for creating Bill and Stock.
+- Date-wise listing for bills.
+- Reverse date order by default for all lists.
+- Filters should be fast and user friendly.
+- Use loading states + error toasts.
+- Use clean print-friendly bill preview template.
+
+############################
+# 8) PDF TEMPLATE REQUIREMENTS
+############################
+Bill PDF must include:
+- Company header: SRI SAI TEX
+- Bill No, Date, Customer Company Name
+- Items table with columns: Sl.No, Colour, Illai, Length(m), Quantity, Amount
+- Total amount
+- Footer: “Thank you”
+
+Generate PDF on server:
+- Create HTML string -> render -> export to PDF -> upload to Supabase Storage.
+Return pdf_url.
+
+############################
+# 9) SUPABASE CONNECTION (MUST INCLUDE IN README)
+############################
+Write README steps clearly:
+1) Create Supabase project
+2) Create Storage bucket "bills" (public or signed URLs - choose public for simplicity)
+3) Run schema SQL in SQL Editor
+4) Enable RLS + policies (include SQL)
+5) Get keys:
+   - NEXT_PUBLIC_SUPABASE_URL
+   - NEXT_PUBLIC_SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_ROLE_KEY (server only, never exposed to client)
+6) Put them in Replit Secrets / .env
+7) Run app
+
+Also ask the user ONLY ONCE (in README) to provide these 3 values if not set.
+
+############################
+# 10) DELIVERABLES
+############################
+- Full working Next.js project with all pages + APIs
+- Supabase SQL file (schema + RLS policies)
+- README with setup steps, including Supabase connection steps
+- Sensible folder structure: /lib/supabaseClient.ts, /lib/supabaseServer.ts, /app/api/..., /components/...
+- Use TypeScript types for DB rows (define types manually or use generated types but keep simple).
+- Ensure no sensitive keys leak to client.
+
+Now implement everything end-to-end.
