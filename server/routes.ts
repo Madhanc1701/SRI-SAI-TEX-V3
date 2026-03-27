@@ -335,5 +335,37 @@ export async function registerRoutes(
     }
   });
 
+  // --- Rate Config ---
+  app.get('/api/rate-config', async (req, res) => {
+    const config = await storage.getRateConfig();
+    res.json(config);
+  });
+
+  app.put('/api/rate-config', async (req, res) => {
+    try {
+      const input = api.rateConfig.update.input.parse(req.body);
+      const updated = await storage.upsertRateConfig(input);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Invalid input" });
+    }
+  });
+
+  // --- Labour Rate Config (per-labour) ---
+  app.get('/api/labour-rate-config/:labourUserId', async (req, res) => {
+    const config = await storage.getLabourRateConfig(req.params.labourUserId);
+    res.json(config);
+  });
+
+  app.put('/api/labour-rate-config/:labourUserId', async (req, res) => {
+    try {
+      const input = api.rateConfig.update.input.parse(req.body);
+      const updated = await storage.upsertLabourRateConfig(req.params.labourUserId, input);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Invalid input" });
+    }
+  });
+
   return httpServer;
 }

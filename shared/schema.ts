@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, date, numeric, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, date, numeric, uuid, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -81,7 +81,23 @@ export const labourWorkRecords = pgTable("labour_work_records", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// 7. Salary Payments
+// 7. Rate Config (single global row)
+export const rateConfig = pgTable("rate_config", {
+  id: text("id").primaryKey().default("global"),
+  lengthRanges: jsonb("length_ranges").notNull().default([]),
+  illaiRanges: jsonb("illai_ranges").notNull().default([]),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 7b. Labour Rate Configs (per-labour, overrides global)
+export const labourRateConfigs = pgTable("labour_rate_configs", {
+  labourUserId: uuid("labour_user_id").primaryKey(), // references profiles(id)
+  lengthRanges: jsonb("length_ranges").notNull().default([]),
+  illaiRanges: jsonb("illai_ranges").notNull().default([]),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// 8. Salary Payments
 export const salaryPayments = pgTable("salary_payments", {
   id: uuid("id").primaryKey().defaultRandom(),
   ownerUserId: uuid("owner_user_id").notNull(),
@@ -161,6 +177,24 @@ export type LabourWorkRecord = typeof labourWorkRecords.$inferSelect;
 export const insertSalaryPaymentSchema = createInsertSchema(salaryPayments).omit({ id: true, createdAt: true });
 export type InsertSalaryPayment = z.infer<typeof insertSalaryPaymentSchema>;
 export type SalaryPayment = typeof salaryPayments.$inferSelect;
+
+// Rate Config
+export const rateRangeSchema = z.object({
+  min: z.number(),
+  max: z.number().nullable(), // null = no upper limit ("above X")
+  rate: z.number(),
+});
+export type RateRange = z.infer<typeof rateRangeSchema>;
+
+export const rateConfigSchema = z.object({
+  lengthRanges: z.array(rateRangeSchema),
+  illaiRanges: z.array(rateRangeSchema),
+});
+export type RateConfigData = z.infer<typeof rateConfigSchema>;
+export type RateConfigRow = typeof rateConfig.$inferSelect;
+
+// Labour Rate Config
+export type LabourRateConfig = typeof labourRateConfigs.$inferSelect;
 
 
 // === API CONTRACT TYPES ===

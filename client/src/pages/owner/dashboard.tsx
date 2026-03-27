@@ -2,13 +2,15 @@ import { useBills } from "@/hooks/use-billing";
 import { useStocks } from "@/hooks/use-stocks";
 import { useLabourProfiles } from "@/hooks/use-labour";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUpRight, ArrowDownRight, Users, Package, TrendingUp, IndianRupee } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Users, Package, TrendingUp, IndianRupee, FileText, PlusCircle } from "lucide-react";
 import { Layout } from "@/components/layout";
+import { useLocation } from "wouter";
 
 export default function OwnerDashboard() {
   const { data: bills } = useBills();
   const { data: stocks } = useStocks();
   const { data: labours } = useLabourProfiles();
+  const [, setLocation] = useLocation();
 
   // Basic analytics logic
   const totalRevenue = bills?.reduce((acc, curr) => acc + Number(curr.totalAmount || 0), 0) || 0;
@@ -107,18 +109,35 @@ export default function OwnerDashboard() {
               <CardTitle className="text-white">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-2">
-               {/* Quick links handled by Sidebar, this is visual filler for dashboard completeness */}
-               <div className="p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors">
-                 <p className="font-medium">Create New Bill</p>
-                 <p className="text-xs opacity-70">Generate invoice PDF</p>
+               <div
+                 className="p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-3"
+                 onClick={() => setLocation("/owner/bills")}
+               >
+                 <FileText className="h-5 w-5 opacity-80" />
+                 <div>
+                   <p className="font-medium">Create New Bill</p>
+                   <p className="text-xs opacity-70">Generate invoice PDF</p>
+                 </div>
                </div>
-               <div className="p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors">
-                 <p className="font-medium">Add Stock</p>
-                 <p className="text-xs opacity-70">Update inventory</p>
+               <div
+                 className="p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-3"
+                 onClick={() => setLocation("/owner/stocks")}
+               >
+                 <PlusCircle className="h-5 w-5 opacity-80" />
+                 <div>
+                   <p className="font-medium">Add Stock</p>
+                   <p className="text-xs opacity-70">Update inventory</p>
+                 </div>
                </div>
-               <div className="p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors">
-                 <p className="font-medium">Register Labour</p>
-                 <p className="text-xs opacity-70">Add new employee</p>
+               <div
+                 className="p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-3"
+                 onClick={() => setLocation("/owner/labour")}
+               >
+                 <Users className="h-5 w-5 opacity-80" />
+                 <div>
+                   <p className="font-medium">Register Labour</p>
+                   <p className="text-xs opacity-70">Add new employee</p>
+                 </div>
                </div>
             </CardContent>
           </Card>

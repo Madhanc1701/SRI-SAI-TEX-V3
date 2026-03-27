@@ -1,9 +1,9 @@
 import { db } from "./db";
 import {
-  profiles, bills, billItems, stocks, stockItems, labourWorkRecords, salaryPayments,
+  profiles, bills, billItems, stocks, stockItems, labourWorkRecords, salaryPayments, rateConfig, labourRateConfigs,
   type InsertProfile, type InsertBill, type InsertBillItem, type InsertStock, type InsertStockItem,
   type InsertLabourWorkRecord, type InsertSalaryPayment, type Profile, type Bill, type Stock,
-  type LabourWorkRecord, type SalaryPayment, type CreateLabourUser
+  type LabourWorkRecord, type SalaryPayment, type CreateLabourUser, type RateConfigData
 } from "@shared/schema";
 import { eq, desc, and, gte, lte, sql, count, ilike, inArray } from "drizzle-orm";
 import { supabaseAdmin } from "./lib/supabase";
@@ -40,6 +40,14 @@ export interface IStorage {
   getSalaryPayments(filters?: { labourUserId?: string; status?: 'PENDING' | 'PAID' }): Promise<SalaryPayment[]>;
   createSalaryPayment(payment: InsertSalaryPayment): Promise<SalaryPayment>;
   updateSalaryPayment(id: string, status: 'PENDING' | 'PAID', paidDate?: string): Promise<SalaryPayment>;
+
+  // Rate Config
+  getRateConfig(): Promise<RateConfigData>;
+  upsertRateConfig(data: RateConfigData): Promise<RateConfigData>;
+
+  // Labour Rate Config (per-labour)
+  getLabourRateConfig(labourUserId: string): Promise<RateConfigData>;
+  upsertLabourRateConfig(labourUserId: string, data: RateConfigData): Promise<RateConfigData>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -300,6 +308,48 @@ export class DatabaseStorage implements IStorage {
       .where(eq(salaryPayments.id, id))
       .returning();
     return updated;
+  }
+
+  // --- Rate Config ---
+  async getRateConfig(): Promise<RateConfigData> {
+    const [row] = await db.select().from(rateConfig).where(eq(rateConfig.id, 'global'));
+    if (!row) return { lengthRanges: [], illaiRanges: [] };
+    return {
+      lengthRanges: (row.lengthRanges as any) || [],
+      illaiRanges: (row.illaiRanges as any) || [],
+    };
+  }
+
+  async upsertRateConfig(data: RateConfigData): Promise<RateConfigData> {
+    await db
+      .insert(rateConfig)
+      .values({ id: 'global', lengthRanges: data.lengthRanges, illaiRanges: data.illaiRanges, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: rateConfig.id,
+        set: { lengthRanges: data.lengthRanges, illaiRanges: data.illaiRanges, updatedAt: new Date() }
+      });
+    return data;
+  }
+
+  // --- Labour Rate Config (per-labour) ---
+  async getLabourRateConfig(labourUserId: string): Promise<RateConfigData> {
+    const [row] = await db.select().from(labourRateConfigs).where(eq(labourRateConfigs.labourUserId, labourUserId));
+    if (!row) return { lengthRanges: [], illaiRanges: [] };
+    return {
+      lengthRanges: (row.lengthRanges as any) || [],
+      illaiRanges: (row.illaiRanges as any) || [],
+    };
+  }
+
+  async upsertLabourRateConfig(labourUserId: string, data: RateConfigData): Promise<RateConfigData> {
+    await db
+      .insert(labourRateConfigs)
+      .values({ labourUserId, lengthRanges: data.lengthRanges, illaiRanges: data.illaiRanges, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: labourRateConfigs.labourUserId,
+        set: { lengthRanges: data.lengthRanges, illaiRanges: data.illaiRanges, updatedAt: new Date() }
+      });
+    return data;
   }
 }
 

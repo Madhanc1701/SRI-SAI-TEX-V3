@@ -10,11 +10,13 @@ import {
   createBillWithItemsSchema,
   createStockWithItemsSchema,
   createLabourUserSchema,
+  rateConfigSchema,
   profiles,
   bills,
   stocks,
   labourWorkRecords,
-  salaryPayments
+  salaryPayments,
+  rateConfig
 } from './schema';
 
 // Export the types that are missing in the frontend
@@ -28,7 +30,8 @@ export {
   insertSalaryPaymentSchema,
   createBillWithItemsSchema,
   createStockWithItemsSchema,
-  createLabourUserSchema
+  createLabourUserSchema,
+  rateConfigSchema
 };
 
 export type { 
@@ -41,7 +44,10 @@ export type {
   InsertSalaryPayment,
   CreateBillWithItems,
   CreateStockWithItems,
-  CreateLabourUser
+  CreateLabourUser,
+  RateRange,
+  RateConfigData,
+  RateConfigRow
 } from './schema';
 
 
@@ -248,6 +254,31 @@ export const api = {
         200: z.custom<typeof salaryPayments.$inferSelect>(),
         404: errorSchemas.notFound,
       },
+    }
+  },
+
+  // --- Rate Config ---
+  rateConfig: {
+    get: {
+      method: 'GET' as const,
+      path: '/api/rate-config' as const,
+      responses: {
+        200: z.object({
+          lengthRanges: z.array(z.object({ min: z.number(), max: z.number().nullable(), rate: z.number() })),
+          illaiRanges: z.array(z.object({ min: z.number(), max: z.number().nullable(), rate: z.number() })),
+        })
+      }
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/rate-config' as const,
+      input: rateConfigSchema,
+      responses: {
+        200: z.object({
+          lengthRanges: z.array(z.object({ min: z.number(), max: z.number().nullable(), rate: z.number() })),
+          illaiRanges: z.array(z.object({ min: z.number(), max: z.number().nullable(), rate: z.number() })),
+        })
+      }
     }
   }
 };

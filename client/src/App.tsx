@@ -12,6 +12,7 @@ import SalariesPage from "@/pages/owner/salaries";
 import LabourManagementPage from "@/pages/owner/labour";
 import LabourHome from "@/pages/labour/home";
 import LabourHistory from "@/pages/labour/history";
+import LabourProfile from "@/pages/labour/profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
@@ -41,7 +42,7 @@ function Router() {
       {/* Labour Routes */}
       <Route path="/labour" component={LabourHome} />
       <Route path="/labour/history" component={LabourHistory} />
-      <Route path="/labour/profile" component={() => <div>Profile Page (Placeholder)</div>} />
+      <Route path="/labour/profile" component={LabourProfile} />
 
       {/* Fallback */}
       <Route component={NotFound} />
